@@ -1,0 +1,590 @@
+ <!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendify • Student ID Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        :root {
+            --primary: 59 130 246;
+        }
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .nav-link {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .nav-link:hover {
+            transform: translateX(8px);
+        }
+        
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        
+        .scan-animation {
+            animation: scanPulse 2s infinite;
+        }
+        
+        @keyframes scanPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
+        }
+        
+        .student-row {
+            transition: all 0.2s;
+        }
+        
+        .student-row.present {
+            background-color: #f0fdf4;
+        }
+    </style>
+</head>
+<body class="h-full bg-gray-50 flex">
+    <!-- Sidebar -->
+    <div class="w-72 bg-white border-r border-gray-200 flex flex-col h-screen fixed">
+        <div class="p-6 border-b border-gray-100">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-2xl font-bold">A</div>
+                <div>
+                    <span class="text-3xl font-bold tracking-tight text-gray-900">Attendify</span>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Student ID Attendance</p>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto py-6 px-3">
+            <nav class="space-y-1">
+                <a onclick="showSection('dashboard')" href="#" class="nav-link flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 rounded-2xl active" id="nav-dashboard">
+                    <i class="fa-solid fa-gauge w-5"></i>
+                    Dashboard
+                </a>
+                <a onclick="showSection('mark')" href="#" class="nav-link flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 rounded-2xl" id="nav-mark">
+                    <i class="fa-solid fa-qrcode w-5"></i>
+                    Mark Attendance
+                </a>
+                <a onclick="showSection('students')" href="#" class="nav-link flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 rounded-2xl" id="nav-students">
+                    <i class="fa-solid fa-users w-5"></i>
+                    Students
+                </a>
+                <a onclick="showSection('reports')" href="#" class="nav-link flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 rounded-2xl" id="nav-reports">
+                    <i class="fa-solid fa-chart-pie w-5"></i>
+                    Reports
+                </a>
+            </nav>
+        </div>
+        
+        <div class="p-4 border-t border-gray-100">
+            <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-3xl">
+                <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-semibold">TK</div>
+                <div>
+                    <p class="font-semibold text-sm">Prof. Tarun Kumar</p>
+                    <p class="text-xs text-gray-500">Computer Science</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 ml-72">
+        <!-- Top Header -->
+        <header class="bg-white border-b border-gray-200 px-8 py-5 flex items-center justify-between sticky top-0 z-50">
+            <div class="flex items-center gap-4">
+                <h1 class="text-2xl font-semibold text-gray-900" id="page-title">Dashboard</h1>
+                <div class="bg-emerald-100 text-emerald-700 text-xs font-medium px-3 py-1 rounded-3xl flex items-center gap-1">
+                    <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                    Class 3B - Today
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <div class="relative">
+                    <input id="global-search" 
+                           type="text" 
+                           placeholder="Search student ID..." 
+                           onkeyup="if(event.key === 'Enter') handleQuickSearch()"
+                           class="w-72 bg-gray-100 border border-transparent focus:border-blue-300 focus:bg-white pl-10 py-3 rounded-3xl text-sm focus:outline-none">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-gray-400"></i>
+                </div>
+                
+                <button onclick="simulateScan()" 
+                        class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-3xl text-sm font-semibold transition">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>Scan ID</span>
+                </button>
+                
+                <div class="flex items-center gap-2">
+                    <div class="text-right">
+                        <p class="text-sm font-medium">Tuesday, June 23</p>
+                        <p class="text-xs text-gray-500">2026</p>
+                    </div>
+                    <i class="fa-solid fa-calendar text-2xl text-gray-300"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- DASHBOARD SECTION -->
+        <div id="section-dashboard" class="p-8">
+            <div class="grid grid-cols-4 gap-6 mb-8">
+                <!-- Stats -->
+                <div class="bg-white rounded-3xl p-6 card-hover">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Total Students</p>
+                            <p class="text-5xl font-bold text-gray-900 mt-2">142</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-3xl">
+                            👥
+                        </div>
+                    </div>
+                    <div class="mt-6 text-emerald-600 text-sm flex items-center gap-1">
+                        <i class="fa-solid fa-arrow-trend-up"></i>
+                        <span>100% enrolled</span>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-3xl p-6 card-hover">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Present Today</p>
+                            <p class="text-5xl font-bold text-emerald-600 mt-2">128</p>
+                        </div>
+                        <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-3xl">
+                            ✅
+                        </div>
+                    </div>
+                    <div class="mt-6 text-emerald-600 text-sm flex items-center gap-1">
+                        <i class="fa-solid fa-arrow-trend-up"></i>
+                        <span>90.1% attendance</span>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-3xl p-6 card-hover">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Absent</p>
+                            <p class="text-5xl font-bold text-orange-600 mt-2">14</p>
+                        </div>
+                        <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-3xl">
+                            ⚠️
+                        </div>
+                    </div>
+                    <div class="mt-6 text-orange-600 text-sm flex items-center gap-1">
+                        <span>9.9% of class</span>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-3xl p-6 card-hover">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Avg. Weekly</p>
+                            <p class="text-5xl font-bold text-gray-900 mt-2">87%</p>
+                        </div>
+                        <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center text-3xl">
+                            📊
+                        </div>
+                    </div>
+                    <div class="mt-6 text-purple-600 text-sm flex items-center gap-1">
+                        <i class="fa-solid fa-arrow-trend-up"></i>
+                        <span>+4% this week</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="grid grid-cols-7 gap-6">
+                <div class="col-span-4 bg-white rounded-3xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="font-semibold text-lg">Today's Attendance</h2>
+                        <button onclick="showSection('mark')" 
+                                class="text-blue-600 text-sm font-medium flex items-center gap-1 hover:underline">
+                            Mark More <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="max-h-96 overflow-auto" id="recent-attendance">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="col-span-3 bg-white rounded-3xl p-6 flex flex-col">
+                    <h2 class="font-semibold text-lg mb-4">Quick Actions</h2>
+                    
+                    <div onclick="simulateScan()" 
+                         class="flex-1 border border-dashed border-blue-300 hover:border-blue-400 rounded-3xl flex flex-col items-center justify-center text-center cursor-pointer mb-4">
+                        <div class="scan-animation w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-4xl mb-4">
+                            📱
+                        </div>
+                        <p class="font-semibold text-blue-700">Tap to Scan ID</p>
+                        <p class="text-xs text-gray-500 mt-1">NFC / QR / Barcode</p>
+                    </div>
+                    
+                    <button onclick="markAllPresent()" 
+                            class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-3xl font-semibold">
+                        Mark All Present
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MARK ATTENDANCE SECTION -->
+        <div id="section-mark" class="p-8 hidden">
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-3xl p-10 shadow">
+                    <div class="text-center mb-10">
+                        <div class="mx-auto w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center text-5xl mb-6 shadow-inner">
+                            📟
+                        </div>
+                        <h2 class="text-3xl font-semibold mb-2">Scan or Enter Student ID</h2>
+                        <p class="text-gray-500">Attendance will be marked automatically</p>
+                    </div>
+                    
+                    <div class="space-y-8">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-2">Student ID</label>
+                            <div class="flex gap-3">
+                                <input id="student-id-input" 
+                                       type="text" 
+                                       placeholder="e.g. STU20230145"
+                                       class="flex-1 bg-gray-50 border border-gray-200 focus:border-blue-500 focus:ring-0 rounded-3xl px-6 py-5 text-lg font-mono">
+                                <button onclick="markAttendanceById()"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white px-10 rounded-3xl font-semibold">
+                                    Mark
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="relative">
+                            <div class="absolute left-1/2 -translate-x-1/2 bg-white px-4 text-xs text-gray-400 font-medium">OR</div>
+                            <div class="h-px bg-gray-200 my-6"></div>
+                        </div>
+                        
+                        <button onclick="simulateScan()" 
+                                class="w-full py-8 border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-3xl flex flex-col items-center justify-center transition">
+                            <i class="fa-solid fa-qrcode text-6xl text-gray-400 mb-4"></i>
+                            <span class="font-semibold text-xl">Click to Simulate Scan</span>
+                            <span class="text-sm text-gray-500">Camera / NFC Reader</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Live Attendance Log -->
+                <div class="mt-8 bg-white rounded-3xl p-6">
+                    <h3 class="font-medium mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check"></i>
+                        Live Attendance Log
+                    </h3>
+                    <div id="attendance-log" class="space-y-3 max-h-96 overflow-auto text-sm">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STUDENTS SECTION -->
+        <div id="section-students" class="p-8 hidden">
+            <div class="bg-white rounded-3xl">
+                <div class="p-6 border-b flex items-center justify-between">
+                    <input id="student-search" 
+                           type="text" 
+                           placeholder="Search students..." 
+                           class="bg-gray-100 border-0 focus:ring-1 focus:ring-blue-300 rounded-3xl px-6 py-3 w-96">
+                    <button onclick="addNewStudent()" 
+                            class="px-5 py-3 bg-gray-900 text-white rounded-3xl text-sm font-medium flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Add Student
+                    </button>
+                </div>
+                
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b">
+                            <th class="text-left py-5 px-8 font-medium text-gray-500">ID</th>
+                            <th class="text-left py-5 px-8 font-medium text-gray-500">Name</th>
+                            <th class="text-left py-5 px-8 font-medium text-gray-500">Department</th>
+                            <th class="text-left py-5 px-8 font-medium text-gray-500">Last Attended</th>
+                            <th class="text-center py-5 px-8 font-medium text-gray-500">Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="students-table" class="divide-y">
+                        <!-- JS populated -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- REPORTS SECTION -->
+        <div id="section-reports" class="p-8 hidden">
+            <div class="bg-white rounded-3xl p-8">
+                <h2 class="text-2xl font-semibold mb-8">Attendance Reports</h2>
+                
+                <div class="grid grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="font-medium mb-4">Monthly Overview</h3>
+                        <div class="h-80 bg-gray-100 rounded-3xl flex items-center justify-center text-gray-400">
+                            <!-- Placeholder for Chart -->
+                            <div class="text-center">
+                                <i class="fa-solid fa-chart-bar text-8xl"></i>
+                                <p class="mt-6">Interactive Chart (Mock)</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-medium mb-4">Top Absentees</h3>
+                        <div class="space-y-6" id="top-absentees">
+                            <!-- JS populated -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="hidden fixed bottom-6 right-6 bg-gray-900 text-white text-sm px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-3">
+        <i class="fa-solid fa-check-circle text-emerald-400"></i>
+        <span id="toast-text"></span>
+    </div>
+
+    <script>
+        // Tailwind script already included via CDN
+        
+        let students = [
+            { id: "STU20230145", name: "Aarav Sharma", dept: "CSE", last: "Today", present: true },
+            { id: "STU20230167", name: "Priya Patel", dept: "ECE", last: "Today", present: true },
+            { id: "STU20230212", name: "Rohan Gupta", dept: "ME", last: "Yesterday", present: false },
+            { id: "STU20230189", name: "Sneha Verma", dept: "CSE", last: "Today", present: true },
+            { id: "STU20230245", name: "Vikram Singh", dept: "IT", last: "Today", present: true },
+        ];
+        
+        let attendanceLog = [];
+        
+        function showSection(section) {
+            document.querySelectorAll('[id^="section-"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`section-${section}`).classList.remove('hidden');
+            
+            // Update active nav
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active', 'bg-blue-50', 'text-blue-600'));
+            document.getElementById(`nav-${section}`).classList.add('active', 'bg-blue-50', 'text-blue-600');
+            
+            document.getElementById('page-title').textContent = 
+                section === 'dashboard' ? 'Dashboard' :
+                section === 'mark' ? 'Mark Attendance' :
+                section === 'students' ? 'All Students' : 'Reports';
+            
+            if (section === 'students') renderStudentsTable();
+            if (section === 'dashboard') renderRecentAttendance();
+        }
+        
+        function renderStudentsTable() {
+            const tbody = document.getElementById('students-table');
+            tbody.innerHTML = '';
+            
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                row.className = 'student-row hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-8 py-6 font-mono text-sm">${student.id}</td>
+                    <td class="px-8 py-6 font-medium">${student.name}</td>
+                    <td class="px-8 py-6 text-gray-500">${student.dept}</td>
+                    <td class="px-8 py-6 text-gray-500">${student.last}</td>
+                    <td class="px-8 py-6 text-center">
+                        ${student.present ? 
+                            `<span class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-4 py-1 rounded-3xl text-xs font-medium"><i class="fa-solid fa-check"></i> Present</span>` : 
+                            `<span class="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-4 py-1 rounded-3xl text-xs font-medium">Absent</span>`
+                        }
+                    </td>
+                    <td class="px-8 py-6 text-right">
+                        <button onclick="toggleStudentStatus('${student.id}')" class="text-blue-600 hover:text-blue-700 text-sm font-medium">Toggle</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        function toggleStudentStatus(id) {
+            const student = students.find(s => s.id === id);
+            if (student) {
+                student.present = !student.present;
+                renderStudentsTable();
+                showToast(`${student.name} marked ${student.present ? 'Present' : 'Absent'}`);
+            }
+        }
+        
+        function renderRecentAttendance() {
+            const container = document.getElementById('recent-attendance');
+            container.innerHTML = `
+                <div class="grid grid-cols-2 gap-4">
+                    ${students.slice(0, 4).map(s => `
+                        <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl">
+                            <div class="w-10 h-10 bg-white shadow rounded-2xl flex items-center justify-center text-xl">${s.present ? '✅' : '❌'}</div>
+                            <div class="flex-1">
+                                <p class="font-medium text-sm">${s.name}</p>
+                                <p class="text-xs text-gray-500 font-mono">${s.id}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs ${s.present ? 'text-emerald-600' : 'text-gray-400'}">• ${s.present ? 'Present' : 'Absent'}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        function markAttendanceById() {
+            const input = document.getElementById('student-id-input');
+            const id = input.value.trim().toUpperCase();
+            
+            if (!id) {
+                showToast("Please enter a Student ID", true);
+                return;
+            }
+            
+            const student = students.find(s => s.id === id);
+            
+            if (student) {
+                student.present = true;
+                student.last = "Today";
+                addToLog(student);
+                showToast(`✅ Attendance marked for ${student.name}`);
+                input.value = '';
+                renderStudentsTable();
+                renderRecentAttendance();
+            } else {
+                showToast("Student not found. Please check ID.", true);
+            }
+        }
+        
+        function addToLog(student) {
+            attendanceLog.unshift({
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                student: student
+            });
+            
+            if (attendanceLog.length > 8) attendanceLog.pop();
+            
+            const logContainer = document.getElementById('attendance-log');
+            logContainer.innerHTML = attendanceLog.map(log => `
+                <div class="flex items-center justify-between bg-gray-50 px-5 py-3 rounded-2xl">
+                    <div class="flex items-center gap-3">
+                        <span class="font-mono text-xs bg-white px-3 py-1 rounded-2xl">${log.time}</span>
+                        <span class="font-medium">${log.student.name}</span>
+                    </div>
+                    <span class="text-emerald-600 text-xs font-semibold">PRESENT</span>
+                </div>
+            `).join('');
+        }
+        
+        function simulateScan() {
+            // Simulate scanning
+            const randomStudent = students[Math.floor(Math.random() * students.length)];
+            randomStudent.present = true;
+            randomStudent.last = "Today";
+            
+            addToLog(randomStudent);
+            showToast(`📱 Scanned: ${randomStudent.name} (${randomStudent.id})`, false, 2500);
+            
+            renderStudentsTable();
+            if (!document.getElementById('section-dashboard').classList.contains('hidden')) {
+                renderRecentAttendance();
+            }
+        }
+        
+        function markAllPresent() {
+            students.forEach(s => {
+                s.present = true;
+                s.last = "Today";
+            });
+            showToast("All students marked present!");
+            renderStudentsTable();
+            renderRecentAttendance();
+        }
+        
+        function handleQuickSearch() {
+            const query = document.getElementById('global-search').value.trim().toUpperCase();
+            if (!query) return;
+            
+            const found = students.find(s => s.id.includes(query) || s.name.toUpperCase().includes(query));
+            if (found) {
+                showToast(`Found: ${found.name}`);
+                setTimeout(() => {
+                    showSection('students');
+                }, 800);
+            } else {
+                showToast("No student found", true);
+            }
+        }
+        
+        function addNewStudent() {
+            const name = prompt("Enter new student full name:");
+            if (!name) return;
+            
+            const newStudent = {
+                id: `STU2023${Math.floor(1000 + Math.random() * 9000)}`,
+                name: name,
+                dept: "CSE",
+                last: "Never",
+                present: false
+            };
+            
+            students.unshift(newStudent);
+            renderStudentsTable();
+            showToast(`New student ${name} added!`);
+        }
+        
+        function showToast(message, isError = false, timeout = 2200) {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toast-text');
+            
+            toastText.textContent = message;
+            toast.classList.toggle('bg-red-600', isError);
+            toast.classList.toggle('bg-gray-900', !isError);
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, timeout);
+        }
+        
+        // Initialize
+        window.onload = function() {
+            showSection('dashboard');
+            renderStudentsTable();
+            renderRecentAttendance();
+            
+            // Demo log entries
+            setTimeout(() => {
+                addToLog(students[0]);
+            }, 800);
+            
+            setTimeout(() => {
+                addToLog(students[1]);
+            }, 1600);
+            
+            // Keyboard shortcut hint
+            console.log('%cStudent ID Attendance Tracker ready! Press S to simulate scan.', 'color: #3b82f6; font-size: 12px');
+            
+            // Global keyboard support
+            document.addEventListener('keydown', function(e) {
+                if (e.key.toLowerCase() === 's' && document.activeElement.tagName !== "INPUT") {
+                    simulateScan();
+                }
+            });
+        };
+    </script>
+</body>
+</html>
